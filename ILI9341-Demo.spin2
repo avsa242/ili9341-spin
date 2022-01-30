@@ -5,7 +5,7 @@
     Description: Simple demo of the ILI9341 driver (P2 version)
     Copyright (c) 2022
     Started Jan 12, 2022
-    Updated Jan 12, 2022
+    Updated Jan 30, 2022
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -40,7 +40,7 @@ OBJ
 
     cfg : "core.con.boardcfg.p2eval"
     ser : "com.serial.terminal.ansi"
-    lcd : "display.lcd.ili9341.8bp"
+    lcd : "display.lcd.ili9341"
     fnt : "font.5x8"
 
 PUB Main()

@@ -1,17 +1,19 @@
 {
     --------------------------------------------
-    Filename: display.lcd.ili9341.8bp.spin2
+    Filename: display.lcd.ili9341.spin
     Author: Jesse Burt
-    Description: Driver for ILI9341 LCD controllers (P2 version)
+    Description: Driver for ILI9341 LCD controllers
     Copyright (c) 2022
-    Started Jan 10, 2022
+    Started Oct 14, 2021
     Updated Jan 15, 2022
     See end of file for terms of use.
     --------------------------------------------
 }
 
+' memory usage for a buffered display would vastly exceed what's available
+'   on the P1, so hardcode direct-to-display directive:
 #define GFX_DIRECT
-#include "lib.gfx.bitmap.spin2"
+#include "lib.gfx.bitmap.spin"
 
 CON
 
@@ -46,14 +48,12 @@ CON
 
 OBJ
 
+    time: "time"                                ' timekeeping methods
     core: "core.con.ili9341"                    ' HW-specific constants
     com : "com.parallel-8bit"                   ' 8-bit Parallel I/O engine
 
 VAR
 
-    long _buff_sz
-    word _disp_width, _disp_height, _disp_xmax, _disp_ymax
-    word _bytesperln
     byte _RESET
 
     ' shadow registers
@@ -70,8 +70,8 @@ PUB Startx(DATA_BASEPIN, RES_PIN, CS_PIN, DC_PIN, WR_PIN, RD_PIN, WIDTH, HEIGHT)
 '   WR_PIN: Write clock
 '   RD_PIN: Read clock (not currently implemented; ignored)
 '   WIDTH, HEIGHT: display dimensions, in pixels
-    if lookdown(DATA_BASEPIN: 0..56) and lookdown(CS_PIN: 0..63) and {
-}   lookdown(DC_PIN: 0..63) and lookdown(WR_PIN: 0..63)
+    if lookdown(DATA_BASEPIN: 0..24) and lookdown(CS_PIN: 0..31) and {
+}   lookdown(DC_PIN: 0..31) and lookdown(WR_PIN: 0..31)
         if (status := com.init(DATA_BASEPIN, CS_PIN, DC_PIN, WR_PIN, RD_PIN))
             _RESET := RES_PIN
             _disp_width := WIDTH
@@ -80,12 +80,12 @@ PUB Startx(DATA_BASEPIN, RES_PIN, CS_PIN, DC_PIN, WR_PIN, RD_PIN, WIDTH, HEIGHT)
             _disp_ymax := _disp_height - 1
             _buff_sz := (_disp_width * _disp_height)
             _bytesperln := _disp_width * BYTESPERPX
-            reset()
+            reset{}
 
-PUB Preset()
+PUB Preset{}
 ' Preset settings
-    reset()
-    waitms(5)
+    reset{}
+    time.msleep(5)
 
     displayvisibility(OFF)
     gvddvoltage(4_750)
@@ -119,7 +119,7 @@ PUB Preset()
     'com.wrbyte_cmd($35) ' tearing effect on
     'com.wrbyte_cmd($b4) ' display inversion
     'com.wrbyte_dat($00)
-    com.wrbyte_cmd(core.DFUNCTR) ' display function control
+    com.wrbyte_cmd(core#DFUNCTR) ' display function control
     com.wrbyte_dat($0a)
     com.wrbyte_dat($82)
     com.wrbyte_dat($27)
@@ -129,10 +129,10 @@ PUB Preset()
     powered(true)
     displayvisibility(NORMAL)
 
-PUB Stop()
+PUB Stop{}
 ' Power off the display, and stop the engine
     powered(false)
-    com.deinit()
+    com.deinit{}
 
 PUB Bitmap(ptr_bmap, xs, ys, xe, ye, nr_words)
 ' Draw bitmap
@@ -141,32 +141,32 @@ PUB Bitmap(ptr_bmap, xs, ys, xe, ye, nr_words)
 '   (xe, ye): lower-right corner of bitmap
 '   nr_words: number of 16-bit words to read/draw from bitmap
     displaybounds(xs, ys, xe, ye)
-    com.wrbyte_cmd(core.RAMWR)
+    com.wrbyte_cmd(core#RAMWR)
     com.wrblkword_msbf(ptr_bmap, nr_words)
 
 PUB Box(x1, y1, x2, y2, color, filled) | xt, yt
 ' Draw a box from (x1, y1) to (x2, y2) in color, optionally filled
-    xt := abs(x2-x1)+1
-    yt := abs(y2-y1)+1
+    xt := ||(x2-x1)+1
+    yt := ||(y2-y1)+1
     if filled
         displaybounds(x1, y1, x2, y2)
-        com.wrbyte_cmd(core.RAMWR)
+        com.wrbyte_cmd(core#RAMWR)
         com.wrwordx_dat(color, (yt * xt))
     else
         displaybounds(x1, y1, x2, y1)           ' top
-        com.wrbyte_cmd(core.RAMWR)
+        com.wrbyte_cmd(core#RAMWR)
         com.wrwordx_dat(color, xt)
 
         displaybounds(x1, y2, x2, y2)           ' bottom
-        com.wrbyte_cmd(core.RAMWR)
+        com.wrbyte_cmd(core#RAMWR)
         com.wrwordx_dat(color, xt)
 
         displaybounds(x1, y1, x1, y2)           ' left
-        com.wrbyte_cmd(core.RAMWR)
+        com.wrbyte_cmd(core#RAMWR)
         com.wrwordx_dat(color, yt)
 
         displaybounds(x2, y1, x2, y2)           ' right
-        com.wrbyte_cmd(core.RAMWR)
+        com.wrbyte_cmd(core#RAMWR)
         com.wrwordx_dat(color, yt)
 
 PUB Char(ch) | gl_c, gl_r, lastgl_c, lastgl_r
@@ -185,7 +185,7 @@ PUB Char(ch) | gl_c, gl_r, lastgl_c, lastgl_r
             repeat gl_c from 0 to lastgl_c      ' column
                 repeat gl_r from 0 to lastgl_r  ' row
                     ' if the current offset in the glyph is a set bit, draw it
-                    if byte[_font_addr][(ch << 3) + gl_c] & (decod(gl_r))
+                    if byte[_font_addr][(ch << 3) + gl_c] & (|< gl_r)
                         plot((_charpx_x + gl_c), (_charpx_y + gl_r), _fgcolor)
                     else
                     ' otherwise, draw the background color, if enabled
@@ -202,10 +202,10 @@ PUB Char(ch) | gl_c, gl_r, lastgl_c, lastgl_r
         other:
             return
 
-PUB Clear()
+PUB Clear{}
 ' Clear display
     displaybounds(0, 0, _disp_xmax, _disp_ymax)
-    com.wrbyte_cmd(core.RAMWR)
+    com.wrbyte_cmd(core#RAMWR)
     com.wrwordx_dat(_bgcolor, _buff_sz)
 
 PUB ClkDiv(cdiv): curr_cdiv
@@ -215,7 +215,7 @@ PUB ClkDiv(cdiv): curr_cdiv
     case cdiv
         1, 2, 4, 8:
             _frmctr1[CLK_DIV] := lookdownz(cdiv: 1, 2, 4, 8)
-            com.wrbyte_cmd(core.FRMCTR1)
+            com.wrbyte_cmd(core#FRMCTR1)
             com.wrbyte_dat(_frmctr1[CLK_DIV])
             com.wrbyte_dat(_frmctr1[FRM_RT])
         other:
@@ -236,7 +236,7 @@ PUB ColorDepth(cbpp): curr_cbpp
             elseif (_colmod == $66)
                 return 18
 
-    com.wrbyte_cmd(core.COLMOD)
+    com.wrbyte_cmd(core#COLMOD)
     com.wrbyte_dat(_colmod)
 
 PUB Contrast(c)
@@ -261,10 +261,10 @@ PUB DisplayBounds(x1, y1, x2, y2) | x, y, cmd_pkt[2]
     cmd_pkt.byte[6] := y2.byte[1]
     cmd_pkt.byte[7] := y2.byte[0]
 
-    com.wrbyte_cmd(core.CASET)
+    com.wrbyte_cmd(core#CASET)
     com.wrblock_dat(@cmd_pkt.byte[0], 4)
 
-    com.wrbyte_cmd(core.PASET)
+    com.wrbyte_cmd(core#PASET)
     com.wrblock_dat(@cmd_pkt.byte[4], 4)
 
 PUB DisplayInverted(state)
@@ -272,23 +272,23 @@ PUB DisplayInverted(state)
 '   Valid values:
 '       TRUE (-1 or 1), FALSE (0)
 '   Any other value is ignored
-    case abs(state)
+    case ||(state)
         0, 1:
-            com.wrbyte_cmd(core.INVOFF + abs(state))
+            com.wrbyte_cmd(core#INVOFF + ||(state))
 
 PUB DisplayRotate(state): curr_state
 ' Rotate display
 '   Valid values: TRUE (-1 or 1), FALSE (0)
 '   Any other value returns the current setting
     curr_state := _madctl
-    case abs(state)
+    case ||(state)
         0, 1:
-            state := abs(state) << core.MV
+            state := ||(state) << core#MV
         other:
-            return (((curr_state >> core.MV) & 1) == 1)
+            return (((curr_state >> core#MV) & 1) == 1)
 
-    _madctl := ((curr_state & core.MV_MASK) | state)
-    com.wrbyte_cmd(core.MADCTL)
+    _madctl := ((curr_state & core#MV_MASK) | state)
+    com.wrbyte_cmd(core#MADCTL)
     com.wrbyte_dat(_madctl)
 
 PUB DisplayVisibility(state): curr_state
@@ -297,16 +297,16 @@ PUB DisplayVisibility(state): curr_state
 '       ALL_OFF/OFF (0), NORMAL/ON (1), ALL_ON (3)
 '   Any other value is ignored
 '   NOTE: Does not affect the display RAM contents
-    case abs(state)
+    case state
         OFF:
-            com.wrbyte_cmd(core.DISPOFF)
+            com.wrbyte_cmd(core#DISPOFF)
         ON:
-            com.wrbyte_cmd(core.ETMOD)
-            com.wrbyte_dat(core.GDR_NORM)
-            com.wrbyte_cmd(core.DISPON)
+            com.wrbyte_cmd(core#ETMOD)
+            com.wrbyte_dat(core#GDR_NORM)
+            com.wrbyte_cmd(core#DISPON)
         ALL_ON:
-            com.wrbyte_cmd(core.ETMOD)
-            com.wrbyte_dat(core.GDR_VGH)
+            com.wrbyte_cmd(core#ETMOD)
+            com.wrbyte_dat(core#GDR_VGH)
         other:
 
 PUB FrameRate(frate): curr_frate
@@ -319,7 +319,7 @@ PUB FrameRate(frate): curr_frate
         61, 63, 65, 68, 70, 73, 76, 79, 83, 86, 90, 95, 100, 106, 112, 119:
             _frmctr1[FRM_RT] := lookdownz(frate: 119, 112, 106, 100, 95, 90, {
 }           86, 83, 79, 76, 73, 70, 68, 65, 63, 61)
-            com.wrbyte_cmd(core.FRMCTR1)
+            com.wrbyte_cmd(core#FRMCTR1)
             com.wrbyte_dat(_frmctr1[CLK_DIV])
             com.wrbyte_dat(_frmctr1[FRM_RT])
         other:
@@ -330,10 +330,10 @@ PUB Gamma3ChCtrl(state): curr_state
 ' Enable 3-gamma control
 '   Valid values: TRUE (-1 or 1), FALSE (0)
 '   Any other value returns the current (cached) setting
-    case abs(state)
+    case ||(state)
         0, 1:
-            _g3ctrl := %10 | abs(state)
-            com.wrbyte_cmd(core.GM3CTRL)
+            _g3ctrl := %10 | ||(state)
+            com.wrbyte_cmd(core#GM3CTRL)
             com.wrbyte_dat(_g3ctrl)
         other:
             return ((_g3ctrl & 1) == 1)
@@ -341,17 +341,17 @@ PUB Gamma3ChCtrl(state): curr_state
 PUB GammaFixedCurve(prest): curr_prest
 ' Set gamma curve preset
 '   NOTE: Parameter is ignored; for API compatibility with other drivers
-    com.wrbyte_cmd(core.GAMMASET)
+    com.wrbyte_cmd(core#GAMMASET)
     com.wrbyte_dat($01)
 
 PUB GammaTableN(ptr_buff)
 ' Modify gamma table (negative polarity)
-    com.wrbyte_cmd(core.GMCTRN1)
+    com.wrbyte_cmd(core#GMCTRN1)
     com.wrblock_dat(ptr_buff, 15)
 
 PUB GammaTableP(ptr_buff)
 ' Modify gamma table (positive polarity)
-    com.wrbyte_cmd(core.GMCTRP1)
+    com.wrbyte_cmd(core#GMCTRP1)
     com.wrblock_dat(ptr_buff, 15)
 
 PUB GVDDVoltage(v): curr_v
@@ -361,7 +361,7 @@ PUB GVDDVoltage(v): curr_v
     case v
         3_000..6_000:
             v := (v / 50) - 57
-            com.wrbyte_cmd(core.PWCTR1)
+            com.wrbyte_cmd(core#PWCTR1)
             com.wrbyte_cmd(v)
 
 PUB HorizRefreshDir(mode): curr_mode
@@ -373,29 +373,29 @@ PUB HorizRefreshDir(mode): curr_mode
     curr_mode := _madctl
     case mode
         NORM, INV:
-            mode <<= core.MH
+            mode <<= core#MH
         other:
-            return ((curr_mode >> core.MH) & 1)
+            return ((curr_mode >> core#MH) & 1)
 
-    _madctl := ((curr_mode & core.MH_MASK) | mode)
-    com.wrbyte_cmd(core.MADCTL)
+    _madctl := ((curr_mode & core#MH_MASK) | mode)
+    com.wrbyte_cmd(core#MADCTL)
     com.wrbyte_dat(_madctl)
 
 PUB Line(x1, y1, x2, y2, color) | sx, sy, ddx, ddy, err, e2
 ' Draw line from (x1, y1) to (x2, y2), in color
     if (x1 == x2)
         displaybounds(x1, y1, x1, y2)           ' vertical
-        com.wrbyte_cmd(core.RAMWR)
-        com.wrwordx_dat(color, (abs(y2-y1))+1)
+        com.wrbyte_cmd(core#RAMWR)
+        com.wrwordx_dat(color, (||(y2-y1))+1)
         return
     if (y1 == y2)
         displaybounds(x1, y1, x2, y1)           ' horizontal
-        com.wrbyte_cmd(core.RAMWR)
-        com.wrwordx_dat(color, (abs(x2-x1))+1)
+        com.wrbyte_cmd(core#RAMWR)
+        com.wrwordx_dat(color, (||(x2-x1))+1)
         return
 
-    ddx := abs(x2-x1)
-    ddy := abs(y2-y1)
+    ddx := ||(x2-x1)
+    ddy := ||(y2-y1)
     err := ddx-ddy
 
     sx := -1
@@ -424,14 +424,14 @@ PUB MirrorH(state): curr_state
 '       TRUE (-1 or 1), FALSE (0)
 '   Any other value returns the current (cached) setting
     curr_state := _madctl
-    case abs(state)
+    case ||(state)
         0, 1:
-            state := (abs(state) ^ 1) << core.MX
+            state := (||(state) ^ 1) << core#MX
         other:
-            return ((((curr_state >> core.MX) & 1) == 1) ^ 1)
+            return ((((curr_state >> core#MX) & 1) == 1) ^ 1)
 
-    _madctl := ((curr_state & core.MX_MASK) | state)
-    com.wrbyte_cmd(core.MADCTL)
+    _madctl := ((curr_state & core#MX_MASK) | state)
+    com.wrbyte_cmd(core#MADCTL)
     com.wrbyte_dat(_madctl)
 
 PUB MirrorV(state): curr_state
@@ -440,14 +440,14 @@ PUB MirrorV(state): curr_state
 '       TRUE (-1 or 1), FALSE (0)
 '   Any other value returns the current (cached) setting
     curr_state := _madctl
-    case abs(state)
+    case ||(state)
         0, 1:
-            state := abs(state) << core.MY
+            state := ||(state) << core#MY
         other:
-            return (((curr_state >> core.MY) & 1) == 1)
+            return (((curr_state >> core#MY) & 1) == 1)
 
-    _madctl := ((curr_state & core.MY_MASK) | state)
-    com.wrbyte_cmd(core.MADCTL)
+    _madctl := ((curr_state & core#MY_MASK) | state)
+    com.wrbyte_cmd(core#MADCTL)
     com.wrbyte_dat(_madctl)
 
 PUB Plot(x, y, color) | cmd_pkt
@@ -458,40 +458,40 @@ PUB Plot(x, y, color) | cmd_pkt
     cmd_pkt.byte[0] := color.byte[1]
     cmd_pkt.byte[1] := color.byte[0]
 
-    com.wrbyte_cmd(core.CASET)
+    com.wrbyte_cmd(core#CASET)
     com.wrwordx_dat(x, 2)
-    com.wrbyte_cmd(core.PASET)
+    com.wrbyte_cmd(core#PASET)
     com.wrwordx_dat(y, 2)
 
-    com.wrbyte_cmd(core.RAMWR)
+    com.wrbyte_cmd(core#RAMWR)
     com.wrblock_dat(@cmd_pkt, 2)
 
 PUB Powered(state)
 ' Enable display power
 '   Valid values:
 '       TRUE (-1 or 1), FALSE (0)
-    case abs(state)
+    case ||(state)
         0:
-            com.wrbyte_cmd(core.DISPOFF)
-            com.wrbyte_cmd(core.SLPIN)
+            com.wrbyte_cmd(core#DISPOFF)
+            com.wrbyte_cmd(core#SLPIN)
         1:
-            com.wrbyte_cmd(core.SLPOUT)
-            waitms(60)
-            com.wrbyte_cmd(core.DISPON)
+            com.wrbyte_cmd(core#SLPOUT)
+            time.msleep(60)
+            com.wrbyte_cmd(core#DISPON)
 
-PUB Reset()
+PUB Reset{}
 ' Reset the display controller
-    if lookdown(_RESET: 0..63)                  ' perform hard reset, if
+    if lookdown(_RESET: 0..31)                  ' perform hard reset, if
         dira[_RESET] := 1                       '   I/O pin is defined
         outa[_RESET] := 1
-        waitms(1)
+        time.msleep(1)
         outa[_RESET] := 0
-        waitms(10)
+        time.msleep(10)
         outa[_RESET] := 1
-        waitms(120)
+        time.msleep(120)
     else                                        ' if not, just soft-reset
-        com.wrbyte_cmd(core.SWRESET)
-        waitms(5)
+        com.wrbyte_cmd(core#SWRESET)
+        time.msleep(5)
 
 PUB SubpixelOrder(order): curr_ord
 ' Set subpixel color order
@@ -502,15 +502,15 @@ PUB SubpixelOrder(order): curr_ord
     curr_ord := _madctl
     case order
         RGB, BGR:
-            order <<= core.BGR
+            order <<= core#BGR
         other:
-            return ((curr_ord >> core.BGR) & 1)
+            return ((curr_ord >> core#BGR) & 1)
 
-    _madctl := ((curr_ord & core.BGR_MASK) | order)
-    com.wrbyte_cmd(core.MADCTL)
+    _madctl := ((curr_ord & core#BGR_MASK) | order)
+    com.wrbyte_cmd(core#MADCTL)
     com.wrbyte_dat(_madctl)
 
-PUB Update()
+PUB Update
 ' Dummy method
 
 PUB VCOMHVoltage(v): curr_v
@@ -520,7 +520,7 @@ PUB VCOMHVoltage(v): curr_v
     case v
         2_700..5_875:
             _vmctrl1[VMH] := v := (v - 2700) / 25
-            com.wrbyte_cmd(core.VMCTR1)
+            com.wrbyte_cmd(core#VMCTR1)
             com.wrbyte_dat(_vmctrl1[VMH])
             com.wrbyte_dat(_vmctrl1[VML])
         other:
@@ -533,7 +533,7 @@ PUB VCOMLVoltage(v): curr_v
     case v
         -2_500..0_000:
             _vmctrl1[VML] := v := (v + 2_500) / 25
-            com.wrbyte_cmd(core.VMCTR1)
+            com.wrbyte_cmd(core#VMCTR1)
             com.wrbyte_dat(_vmctrl1[VMH])
             com.wrbyte_dat(_vmctrl1[VML])
         other:
@@ -547,8 +547,8 @@ PUB VCOMOffset(v): curr_v
         -63..63:
             v += 64
             _vcomoffs := v
-            v |= core.SETNVM                    ' must be set to adjust
-            com.wrbyte_cmd(core.VMCTR2)
+            v |= core#SETNVM                    ' must be set to adjust
+            com.wrbyte_cmd(core#VMCTR2)
             com.wrbyte_dat(v)
         other:
             return (_vcomoffs-64)
@@ -562,13 +562,12 @@ PUB VertRefreshDir(mode): curr_mode
     curr_mode := _madctl
     case mode
         NORM, INV:
-            mode <<= core.ML
+            mode <<= core#ML
         other:
-            return ((curr_mode >> core.ML) & 1)
+            return ((curr_mode >> core#ML) & 1)
 
-    _madctl := ((curr_mode & core.ML_MASK) | mode)
-    _madctl |= (1 << 4)
-    com.wrbyte_cmd(core.MADCTL)
+    _madctl := ((curr_mode & core#ML_MASK) | mode)
+    com.wrbyte_cmd(core#MADCTL)
     com.wrbyte_dat(_madctl)
 
 PUB VGHStepFactor(fact): curr_fact
@@ -584,7 +583,7 @@ PUB VGHStepFactor(fact): curr_fact
 
     fact := ((curr_fact & core#VGH_MASK) | fact)
     _madctl |= (1 << 4)
-    com.wrbyte_cmd(core.PWCTR2)
+    com.wrbyte_cmd(core#PWCTR2)
     com.wrbyte_dat(fact)
 
 PUB VGLStepFactor(fact): curr_fact
@@ -599,7 +598,7 @@ PUB VGLStepFactor(fact): curr_fact
             return (curr_fact & 1)
 
     fact := ((curr_fact & core#VGH_MASK) | fact)
-    com.wrbyte_cmd(core.PWCTR2)
+    com.wrbyte_cmd(core#PWCTR2)
     com.wrbyte_dat(fact)
 
 DAT

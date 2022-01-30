@@ -3,9 +3,9 @@
     Filename: ILI9341-Demo.spin
     Author: Jesse Burt
     Description: Simple demo of the ILI9341 driver
-    Copyright (c) 2021
+    Copyright (c) 2022
     Started Oct 14, 2021
-    Updated Oct 14, 2021
+    Updated Jan 30, 2022
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -41,7 +41,7 @@ OBJ
     cfg : "core.con.boardcfg.flip"
     ser : "com.serial.terminal.ansi"
     time: "time"
-    lcd : "display.lcd.ili9341.8bp"
+    lcd : "display.lcd.ili9341"
     fnt : "font.5x8"
 
 PUB Main

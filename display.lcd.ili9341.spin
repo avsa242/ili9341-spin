@@ -94,7 +94,7 @@ PUB preset{}
 
     mirror_v(false)
     mirror_h(false)
-    disp_rot(false)
+    disp_rot_ena(false)
     vert_refresh_dir(NORM)
     subpix_order(RGB)
     horiz_refresh_dir(NORM)
@@ -104,7 +104,7 @@ PUB preset{}
     clk_div(1)
     frame_rate(70)
 
-    gamma_3ch_ctrl(false)
+    gamma_ctrl_ena(false)
     gamma_fixed_curve(2_2)                      ' param ignored; for symbolic purpose only
     gamma_tbl_neg(@_gammatbl_neg)
     gamma_tbl_pos(@_gammatbl_pos)
@@ -266,24 +266,20 @@ PUB disp_area(x1, y1, x2, y2) | x, y, cmd_pkt[2]
 PUB disp_inverted(state)
 ' Invert display colors
 '   Valid values:
-'       TRUE (-1 or 1), FALSE (0)
-'   Any other value is ignored
-    case ||(state)
-        0, 1:
-            com.wrbyte_cmd(core#INVOFF + ||(state))
+'       TRUE (non-zero), FALSE (0)
+    com.wrbyte_cmd(core#INVOFF + ((state <> 0 ) & 1))
 
-PUB disp_rot(state): curr_state
+PUB disp_rot{}: state
+' Get display rotation state
+'   Returns: TRUE (-1) or FALSE (0)
+    return (((_madctl >> core#MV) & 1) == 1)
+
+PUB disp_rot_ena(state)
 ' Rotate display
-'   Valid values: TRUE (-1 or 1), FALSE (0)
-'   Any other value returns the current setting
-    curr_state := _madctl
-    case ||(state)
-        0, 1:
-            state := ||(state) << core#MV
-        other:
-            return (((curr_state >> core#MV) & 1) == 1)
+'   Valid values: TRUE (non-zero), FALSE (0)
+    state := (((state <> 0) & 1) << core#MV)
 
-    _madctl := ((curr_state & core#MV_MASK) | state)
+    _madctl := ((_madctl & core#MV_MASK) | state)
     com.wrbyte_cmd(core#MADCTL)
     com.wrbyte_dat(_madctl)
 
@@ -303,7 +299,6 @@ PUB disp_vis_ena(state): curr_state
         ALL_ON:
             com.wrbyte_cmd(core#ETMOD)
             com.wrbyte_dat(core#GDR_VGH)
-        other:
 
 PUB frame_rate(frate): curr_frate
 ' Set LCD maximum frame rate, in Hz
@@ -322,17 +317,12 @@ PUB frame_rate(frate): curr_frate
             return lookupz(_frmctr1[FRM_RT]: 119, 112, 106, 100, 95, 90, 86, {
 }           83, 79, 76, 73, 70, 68, 65, 63, 61)
 
-PUB gamma_3ch_ctrl(state): curr_state
+PUB gamma_ctrl_ena(state)
 ' Enable 3-gamma control
-'   Valid values: TRUE (-1 or 1), FALSE (0)
-'   Any other value returns the current (cached) setting
-    case ||(state)
-        0, 1:
-            _g3ctrl := %10 | ||(state)
-            com.wrbyte_cmd(core#GM3CTRL)
-            com.wrbyte_dat(_g3ctrl)
-        other:
-            return ((_g3ctrl & 1) == 1)
+'   Valid values: TRUE (non-zero), FALSE (0)
+    _g3ctrl := (%10 | ((state <> 0) & 1))
+    com.wrbyte_cmd(core#GM3CTRL)
+    com.wrbyte_dat(_g3ctrl)
 
 PUB gamma_fixed_curve(prest): curr_prest
 ' Set gamma curve preset
@@ -464,15 +454,14 @@ PUB plot(x, y, color) | cmd_pkt
 PUB powered(state)
 ' Enable display power
 '   Valid values:
-'       TRUE (-1 or 1), FALSE (0)
-    case ||(state)
-        0:
-            com.wrbyte_cmd(core#DISPOFF)
-            com.wrbyte_cmd(core#SLPIN)
-        1:
-            com.wrbyte_cmd(core#SLPOUT)
-            time.msleep(60)
-            com.wrbyte_cmd(core#DISPON)
+'       TRUE (non-zero), FALSE (0)
+    if (state)
+        com.wrbyte_cmd(core#SLPOUT)
+        time.msleep(60)
+        com.wrbyte_cmd(core#DISPON)
+    else
+        com.wrbyte_cmd(core#DISPOFF)
+        com.wrbyte_cmd(core#SLPIN)
 
 PUB reset{}
 ' Reset the display controller

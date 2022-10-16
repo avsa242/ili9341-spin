@@ -5,7 +5,7 @@
     Description: Driver for ILI9341 LCD controllers (P2 version)
     Copyright (c) 2022
     Started Jan 10, 2022
-    Updated Oct 6, 2022
+    Updated Oct 16, 2022
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -164,7 +164,9 @@ PUB box(x1, y1, x2, y2, color, filled) | xt, yt
         com.wrbyte_cmd(core.RAMWR)
         com.wrwordx_dat(color, yt)
 
-PUB char(ch) | gl_c, gl_r, lastgl_c, lastgl_r
+PUB tx = putchar
+PUB char = putchar
+PUB putchar(ch) | gl_c, gl_r, lastgl_c, lastgl_r
 ' Draw character from currently loaded font
     lastgl_c := _font_width-1
     lastgl_r := _font_height-1

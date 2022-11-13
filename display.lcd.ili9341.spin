@@ -13,7 +13,7 @@
 ' memory usage for a buffered display would vastly exceed what's available
 '   on the P1, so hardcode direct-to-display directive:
 #define GFX_DIRECT
-#include "lib.gfx.bitmap.spin"
+#include "graphics.common.spinh"
 
 CON
 

@@ -11,6 +11,7 @@ This is a P8X32A/Propeller, P2X8C4M64P/Propeller 2 driver object for the ILI9341
 * Integration with generic bitmap graphics library
 * Display mirroring (vertical/horizontal) and rotation (landscape/portrait up/down)
 
+
 ## Requirements
 
 P1/SPIN1:
@@ -23,18 +24,18 @@ P2/SPIN2:
 * p2-spin-standard-library
 * graphics.common.spin2h (provided by p2-spin-standard-library)
 
+
 ## Compiler Compatibility
 
-| Processor | Language | Compiler               | Backend     | Status                |
-|-----------|----------|------------------------|-------------|-----------------------|
-| P1        | SPIN1    | FlexSpin (5.9.23-beta) | Bytecode    | OK                    |
-| P1        | SPIN1    | FlexSpin (5.9.23-beta) | Native code | OK                    |
-| P1        | SPIN1    | OpenSpin (1.00.81)     | Bytecode    | Untested (deprecated) |
-| P2        | SPIN2    | FlexSpin (5.9.23-beta) | NuCode      | Untested              |
-| P2        | SPIN2    | FlexSpin (5.9.23-beta) | Native code | OK                    |
-| P1        | SPIN1    | Brad's Spin Tool (any) | Bytecode    | Unsupported           |
-| P1, P2    | SPIN1, 2 | Propeller Tool (any)   | Bytecode    | Unsupported           |
-| P1, P2    | SPIN1, 2 | PNut (any)             | Bytecode    | Unsupported           |
+| Processor | Language | Compiler               | Backend      | Status                |
+|-----------|----------|------------------------|--------------|-----------------------|
+| P1        | SPIN1    | FlexSpin (6.2.1)       | Bytecode     | OK                    |
+| P1        | SPIN1    | FlexSpin (6.2.1)       | Native/PASM  | OK                    |
+| P2        | SPIN2    | FlexSpin (6.2.1)       | NuCode       | Untested              |
+| P2        | SPIN2    | FlexSpin (6.2.1)       | Native/PASM2 | OK                    |
+
+(other versions or toolchains not listed are __not supported__, and _may or may not_ work)
+
 
 ## Limitations
 

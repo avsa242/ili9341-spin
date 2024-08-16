@@ -5,9 +5,11 @@ This is a P8X32A/Propeller, P2X8C4M64P/Propeller 2 driver object for the ILI9341
 
 **IMPORTANT**: This software is meant to be used with the [spin-standard-library](https://github.com/avsa242/spin-standard-library) (P8X32A) or [p2-spin-standard-library](https://github.com/avsa242/p2-spin-standard-library) (P2X8C4M64P). Please install the applicable library first before attempting to use this code, otherwise you will be missing several files required to build the project.
 
+
 ## Salient Features
 
 * 8-bit Parallel connection
+* 16bpp color depth
 * Integration with generic bitmap graphics library
 * Display mirroring (vertical/horizontal) and rotation (landscape/portrait up/down)
 
@@ -29,10 +31,10 @@ P2/SPIN2:
 
 | Processor | Language | Compiler               | Backend      | Status                |
 |-----------|----------|------------------------|--------------|-----------------------|
-| P1        | SPIN1    | FlexSpin (6.8.0)       | Bytecode     | OK                    |
-| P1        | SPIN1    | FlexSpin (6.8.0)       | Native/PASM  | OK                    |
-| P2        | SPIN2    | FlexSpin (6.8.0)       | NuCode       | Untested              |
-| P2        | SPIN2    | FlexSpin (6.8.0)       | Native/PASM2 | OK                    |
+| P1        | SPIN1    | FlexSpin (6.9.4)       | Bytecode     | OK                    |
+| P1        | SPIN1    | FlexSpin (6.9.4)       | Native/PASM  | OK                    |
+| P2        | SPIN2    | FlexSpin (6.9.4)       | NuCode       | Untested              |
+| P2        | SPIN2    | FlexSpin (6.9.4)       | Native/PASM2 | OK                    |
 
 (other versions or toolchains not listed are __not supported__, and _may or may not_ work)
 
@@ -41,4 +43,5 @@ P2/SPIN2:
 
 * Very early in development - may malfunction, or outright fail to build
 * Not optimized
+* 18bpp color depth not supported (unplanned, for now)
 

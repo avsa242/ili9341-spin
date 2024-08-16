@@ -1,12 +1,12 @@
 {
----------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------
     Filename:       display.lcd.ili9341.spin
     Description:    Driver for ILI9341 LCD controllers
     Author:         Jesse Burt
     Started:        Oct 14, 2021
-    Updated:        Feb 13, 2024
+    Updated:        Aug 16, 2024
     Copyright (c) 2024 - See end of file for terms of use.
----------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------
 }
 
 ' memory usage for a buffered display would vastly exceed what's available
@@ -33,7 +33,7 @@ CON
     MAX_COLOR   = (1 << BPP)-1
     BYTESPERPX  = 1 #> BPP/8
     BPPDIV      = 1 #> (8 / BPP)
-    BUFF_SZ     = (WIDTH * HEIGHT) / BPPDIV
+    BUFF_SZ     = ( (WIDTH * HEIGHT) * BYTESPERPX ) / BPPDIV
     XMAX        = WIDTH-1
     YMAX        = HEIGHT-1
     CENTERX     = WIDTH/2
@@ -63,11 +63,13 @@ CON
     FCLK_DIV    = 0                         ' FRMCTR1
     FRM_RT      = 1
 
+
 OBJ
 
-    time: "time"                                ' timekeeping methods
-    core: "core.con.ili9341"                    ' HW-specific constants
-    com : "com.parallel-8bit"                   ' 8-bit Parallel I/O engine
+    time:   "time"                              ' timekeeping methods
+    core:   "core.con.ili9341"                  ' HW-specific constants
+    com:    "com.parallel-8bit"                 ' 8-bit Parallel I/O engine
+
 
 VAR
 
@@ -78,9 +80,11 @@ VAR
     byte _madctl, _pwr_ctrl2, _vmctrl1[2], _vcomoffs, _colmod, _frmctr1[2]
     byte _g3ctrl
 
+
 PUB start(): status
 ' Start the driver using default I/O settings
     return startx(DBASEPIN, RST, CS, DC, WRX, WIDTH, HEIGHT)
+
 
 PUB startx(DATA_BASEPIN, RES_PIN, CS_PIN, DC_PIN, WR_PIN, DISP_W, DISP_H): status
 ' Start driver using custom I/O settings
@@ -100,6 +104,7 @@ PUB startx(DATA_BASEPIN, RES_PIN, CS_PIN, DC_PIN, WR_PIN, DISP_W, DISP_H): statu
     ' Double check I/O pin assignments, connections, power
     ' Lastly - make sure you have at least one free core/cog
     return FALSE
+
 
 PUB defaults()
 ' Preset settings: defaults
@@ -148,6 +153,7 @@ PUB defaults()
     powered(true)
     visibility(NORMAL)
 
+
 PUB preset_hiletgo_2p4_320x240_land_up()
 ' HiLetGo 2.4"
 '   Landscape (320x * 240y), up (K1 button to left)
@@ -158,6 +164,7 @@ PUB preset_hiletgo_2p4_320x240_land_up()
     mirror_h(false)
     mirror_v(false)
     rotation(1)
+
 
 PUB preset_hiletgo_2p4_320x240_land_down()
 ' HiLetGo 2.4"
@@ -170,6 +177,7 @@ PUB preset_hiletgo_2p4_320x240_land_down()
     mirror_v(true)
     rotation(1)
 
+
 PUB preset_hiletgo_2p4_240x320_port_up()
 ' HiLetGo 2.4"
 '   Portrait (240x * 320y), up (K1 button to top)
@@ -180,6 +188,7 @@ PUB preset_hiletgo_2p4_240x320_port_up()
     mirror_h(true)
     mirror_v(false)
     rotation(0)
+
 
 PUB preset_hiletgo_2p4_240x320_port_down()
 ' HiLetGo 2.4"
@@ -192,10 +201,12 @@ PUB preset_hiletgo_2p4_240x320_port_down()
     mirror_v(true)
     rotation(0)
 
+
 PUB stop()
 ' Power off the display, and stop the engine
     powered(false)
     com.deinit()
+
 
 PUB bitmap(ptr_bmap, sx, sy, ex, ey) | nr_words
 ' Draw bitmap
@@ -207,6 +218,7 @@ PUB bitmap(ptr_bmap, sx, sy, ex, ey) | nr_words
     nr_words := 1 #> ( (ex-sx) * (ey-sy) ) / BYTESPERPX
     com.wrbyte_cmd(core.RAMWR)
     com.wrblkword_msbf(ptr_bmap, nr_words)
+
 
 PUB box(x1, y1, x2, y2, color, filled) | xt, yt
 ' Draw a box from (x1, y1) to (x2, y2) in color, optionally filled
@@ -233,11 +245,13 @@ PUB box(x1, y1, x2, y2, color, filled) | xt, yt
         com.wrbyte_cmd(core.RAMWR)
         com.wrwordx_dat(color, yt)
 
+
 PUB clear()
 ' Clear display
     draw_area(0, 0, _disp_xmax, _disp_ymax)
     com.wrbyte_cmd(core.RAMWR)
     com.wrwordx_dat(_bgcolor, _buff_sz)
+
 
 PUB clk_div(cdiv)
 ' Set LCD clock divisor
@@ -246,6 +260,7 @@ PUB clk_div(cdiv)
     com.wrbyte_cmd(core.FRMCTR1)
     com.wrbyte_dat(_frmctr1[FCLK_DIV])
     com.wrbyte_dat(_frmctr1[FRM_RT])
+
 
 PUB color_depth(cbpp)
 ' Set display color depth, in bits per pixel
@@ -257,6 +272,7 @@ PUB color_depth(cbpp)
 
     com.wrbyte_cmd(core.COLMOD)
     com.wrbyte_dat(_colmod)
+
 
 PUB draw_area(x1, y1, x2, y2) | x, y, cmd_pkt[2]
 ' Set drawing area for subsequent drawing command(s)
@@ -284,6 +300,7 @@ PUB draw_area(x1, y1, x2, y2) | x, y, cmd_pkt[2]
     com.wrbyte_cmd(core.PASET)
     com.wrblock_dat(@cmd_pkt.byte[4], 4)
 
+
 PUB frame_rate(frate): curr_frate
 ' Set LCD maximum frame rate, in Hz
 '   Valid values: 61, 63, 65, 68, 70, 73, 76, 79, 83, 86, 90, 95, 100, 106, 112, 119
@@ -294,6 +311,7 @@ PUB frame_rate(frate): curr_frate
     com.wrbyte_dat(_frmctr1[FCLK_DIV])
     com.wrbyte_dat(_frmctr1[FRM_RT])
 
+
 PUB gamma_ctrl_ena(state)
 ' Enable 3-gamma control
 '   Valid values: TRUE (non-zero), FALSE (0)
@@ -301,21 +319,25 @@ PUB gamma_ctrl_ena(state)
     com.wrbyte_cmd(core.GM3CTRL)
     com.wrbyte_dat(_g3ctrl)
 
+
 PUB gamma_fixed_curve(preset)
 ' Set gamma curve preset
 '   NOTE: Parameter is ignored; for API compatibility with other drivers
     com.wrbyte_cmd(core.GAMMASET)
     com.wrbyte_dat($01)
 
+
 PUB gamma_tbl_neg(ptr_buff)
 ' Modify gamma table (negative polarity)
     com.wrbyte_cmd(core.GMCTRN1)
     com.wrblock_dat(ptr_buff, 15)
 
+
 PUB gamma_tbl_pos(ptr_buff)
 ' Modify gamma table (positive polarity)
     com.wrbyte_cmd(core.GMCTRP1)
     com.wrblock_dat(ptr_buff, 15)
+
 
 PUB gvdd_voltage(v)
 ' Set GVDD level, in millivolts
@@ -324,6 +346,7 @@ PUB gvdd_voltage(v)
     v := (( (3_000 #> v <# 6_000) / 50) - 57)
     com.wrbyte_cmd(core.PWCTR1)
     com.wrbyte_cmd(v)
+
 
 PUB horiz_refresh_dir(mode)
 ' Set panel horizontal refresh direction
@@ -336,11 +359,13 @@ PUB horiz_refresh_dir(mode)
     com.wrbyte_cmd(core.MADCTL)
     com.wrbyte_dat(_madctl)
 
+
 PUB invert_colors(state)
 ' Invert display colors
 '   Valid values:
 '       TRUE (non-zero), FALSE (0)
     com.wrbyte_cmd(core.INVOFF + ((state <> 0 ) & 1))
+
 
 PUB line(x1, y1, x2, y2, color) | sx, sy, ddx, ddy, err, e2
 ' Draw line from (x1, y1) to (x2, y2), in color
@@ -380,6 +405,7 @@ PUB line(x1, y1, x2, y2, color) | sx, sy, ddx, ddy, err, e2
             err += ddx
             y1 += sy
 
+
 PUB mirror_h(state)
 ' Mirror display, horizontally
 '   Valid values:
@@ -390,6 +416,7 @@ PUB mirror_h(state)
     com.wrbyte_cmd(core.MADCTL)
     com.wrbyte_dat(_madctl)
 
+
 PUB mirror_v(state)
 ' Mirror display, vertically
 '   Valid values:
@@ -399,6 +426,7 @@ PUB mirror_v(state)
     _madctl := ((_madctl & core.MY_MASK) | state)
     com.wrbyte_cmd(core.MADCTL)
     com.wrbyte_dat(_madctl)
+
 
 PUB plot(x, y, color) | cmd_pkt
 ' Plot pixel at (x, y) in color (direct to display)
@@ -415,6 +443,7 @@ PUB plot(x, y, color) | cmd_pkt
     com.wrbyte_cmd(core.RAMWR)
     com.wrblock_dat(@cmd_pkt, 2)
 
+
 PUB powered(state)
 ' Enable display power
 '   Valid values:
@@ -426,6 +455,7 @@ PUB powered(state)
     else
         com.wrbyte_cmd(core.DISPOFF)
         com.wrbyte_cmd(core.SLPIN)
+
 
 PUB reset()
 ' Reset the display controller
@@ -441,6 +471,7 @@ PUB reset()
         com.wrbyte_cmd(core.SWRESET)
         time.msleep(5)
 
+
 PUB rotation(state)
 ' Rotate display
 '   Valid values: TRUE (non-zero), FALSE (0)
@@ -450,13 +481,16 @@ PUB rotation(state)
     com.wrbyte_cmd(core.MADCTL)
     com.wrbyte_dat(_madctl)
 
+
 #ifdef GFX_DIRECT
 PUB scroll_up_fs(px)
 ' dummy method
 #endif
 
+
 PUB show()
 ' dummy method for compatibility with other drivers
+
 
 PUB subpix_order(order)
 ' Set subpixel color order
@@ -469,6 +503,7 @@ PUB subpix_order(order)
     com.wrbyte_cmd(core.MADCTL)
     com.wrbyte_dat(_madctl)
 
+
 PUB vcomh_voltage(v)
 ' Set VCOMH voltage, in millivolts
 '   Valid values: 2_700..5_875 (rounded to nearest 25mV; default: 3_925)
@@ -476,6 +511,7 @@ PUB vcomh_voltage(v)
     com.wrbyte_cmd(core.VMCTR1)
     com.wrbyte_dat(_vmctrl1[VMH])
     com.wrbyte_dat(_vmctrl1[VML])
+
 
 PUB vcoml_voltage(v)
 ' Set VCOML voltage, in millivolts
@@ -485,12 +521,14 @@ PUB vcoml_voltage(v)
     com.wrbyte_dat(_vmctrl1[VMH])
     com.wrbyte_dat(_vmctrl1[VML])
 
+
 PUB vcom_offset(v)
 ' Set VCOMH/VCOML offset, in millivolts
 '   Valid values: -63..63 (clamped to range; POR: 0)
     _vcomoffs := ((-63 #> v <# 63) + 64)
     com.wrbyte_cmd(core.VMCTR2)
     com.wrbyte_dat(_vcomoffs | core.SETNVM)
+
 
 PUB vert_refresh_dir(mode)
 ' Set panel vertical refresh direction
@@ -503,6 +541,7 @@ PUB vert_refresh_dir(mode)
     com.wrbyte_cmd(core.MADCTL)
     com.wrbyte_dat(_madctl)
 
+
 PUB vgh_step_factor(fact)
 ' Set step-up factor for VGH operating voltage (VCI * n)
 '   Valid values: 6, 7 (clamped to range)
@@ -512,6 +551,7 @@ PUB vgh_step_factor(fact)
     com.wrbyte_cmd(core.PWCTR2)
     com.wrbyte_dat(_pwr_ctrl2)
 
+
 PUB vgl_step_factor(fact)
 ' Set step-up factor for VGL operating voltage (VCI * n)
 '   Valid values: 3, 4 (clamped to range)
@@ -520,6 +560,7 @@ PUB vgl_step_factor(fact)
     _pwr_ctrl2 := ((_pwr_ctrl2 & core.VGH_MASK) | fact)
     com.wrbyte_cmd(core.PWCTR2)
     com.wrbyte_dat(_pwr_ctrl2)
+
 
 PUB visibility(mode)
 ' Set display visibility
@@ -538,6 +579,7 @@ PUB visibility(mode)
             com.wrbyte_cmd(core.ETMOD)
             com.wrbyte_dat(core.GDR_VGH)
 
+
 DAT
 
     _gammatbl_neg   byte    $00, $25, $27, $05
@@ -549,6 +591,7 @@ DAT
                     byte    $0f, $06, $45, $87
                     byte    $32, $0a, $07, $02
                     byte    $07, $05, $00
+
 
 DAT
 {

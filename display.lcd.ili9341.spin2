@@ -30,7 +30,7 @@ CON
     MAX_COLOR   = (1 << BPP)-1
     BYTESPERPX  = 1 #> BPP/8
     BPPDIV      = 1 #> (8 / BPP)
-    BUFF_SZ     = ( (WIDTH * HEIGHT) * BYTESPERPX ) / BPPDIV
+    BUFF_SZ     = (WIDTH * HEIGHT) / BPPDIV     ' buffer size in words
     XMAX        = WIDTH-1
     YMAX        = HEIGHT-1
     CENTERX     = WIDTH/2

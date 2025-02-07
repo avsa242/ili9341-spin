@@ -4,8 +4,8 @@
     Description:    Driver for ILI9341 LCD controllers
     Author:         Jesse Burt
     Started:        Oct 14, 2021
-    Updated:        Aug 16, 2024
-    Copyright (c) 2024 - See end of file for terms of use.
+    Updated:        Feb 7, 2025
+    Copyright (c) 2025 - See end of file for terms of use.
 ----------------------------------------------------------------------------------------------------
 }
 
@@ -29,11 +29,11 @@ CON
     { /// }
 
 
-    BPP         = 16
+    BPP         = 16                            ' bits per pixel/color depth of the display
+    BYTESPERPX  = 1 #> (BPP/8)                  ' limit to minimum of 1
+    BPPDIV      = BYTESPERPX #> (8 / BPP)       ' limit to range BYTESPERPX .. (8/BPP)
+    BUFF_SZ     = (WIDTH * HEIGHT) / BPPDIV
     MAX_COLOR   = (1 << BPP)-1
-    BYTESPERPX  = 1 #> BPP/8
-    BPPDIV      = 1 #> (8 / BPP)
-    BUFF_SZ     = (WIDTH * HEIGHT) / BPPDIV     ' buffer size in words
     XMAX        = WIDTH-1
     YMAX        = HEIGHT-1
     CENTERX     = WIDTH/2
@@ -60,7 +60,7 @@ CON
     VMH         = 0
     VML         = 1
 
-    FCLK_DIV    = 0                         ' FRMCTR1
+    FCLK_DIV    = 0                             ' FRMCTR1
     FRM_RT      = 1
 
 
@@ -154,9 +154,12 @@ PUB defaults()
     visibility(NORMAL)
 
 
-PUB preset_hiletgo_2p4_320x240_land_up()
-' HiLetGo 2.4"
-'   Landscape (320x * 240y), up (K1 button to left)
+PUB preset_hiletgo_2p4_320x240_land_up = preset_adafruit_3p2_320x240_land_up
+PUB preset_adafruit_3p2_320x240_land_up()
+' Preset settings:
+'   Adafruit 3.2" (#1743)
+'   HiLetGo 2.4"
+'   Landscape (320x * 240y), up
     defaults()
     set_dims(320, 240)
     draw_area(0, 0, _disp_xmax, _disp_ymax)
@@ -166,9 +169,12 @@ PUB preset_hiletgo_2p4_320x240_land_up()
     rotation(1)
 
 
-PUB preset_hiletgo_2p4_320x240_land_down()
-' HiLetGo 2.4"
-'   Landscape (320x * 240y), down (K1 button to right)
+PUB preset_hiletgo_2p4_320x240_land_down = preset_adafruit_3p2_320x240_land_down
+PUB preset_adafruit_3p2_320x240_land_down()
+' Preset settings:
+'   Adafruit 3.2" (#1743)
+'   HiLetGo 2.4"
+'   Landscape (320x * 240y), down
     defaults()
     set_dims(320, 240)
     draw_area(0, 0, _disp_xmax, _disp_ymax)
@@ -178,9 +184,12 @@ PUB preset_hiletgo_2p4_320x240_land_down()
     rotation(1)
 
 
-PUB preset_hiletgo_2p4_240x320_port_up()
-' HiLetGo 2.4"
-'   Portrait (240x * 320y), up (K1 button to top)
+PUB preset_hiletgo_2p4_240x320_port_up = preset_adafruit_3p2_240x320_port_up
+PUB preset_adafruit_3p2_240x320_port_up()
+' Preset settings:
+'   Adafruit 3.2" (#1743)
+'   HiLetGo 2.4"
+'   Portrait (240x * 320y), up
     defaults()
     set_dims(240, 320)
     draw_area(0, 0, _disp_xmax, _disp_ymax)
@@ -190,9 +199,12 @@ PUB preset_hiletgo_2p4_240x320_port_up()
     rotation(0)
 
 
-PUB preset_hiletgo_2p4_240x320_port_down()
-' HiLetGo 2.4"
-'   Portrait (240x * 320y), up (K1 button to bottom)
+PUB preset_hiletgo_2p4_240x320_port_down = preset_adafruit_3p2_240x320_port_down
+PUB preset_adafruit_3p2_240x320_port_down()
+' Preset settings:
+'   Adafruit 3.2" (#1743)
+'   HiLetGo 2.4"
+'   Portrait (240x * 320y), down
     defaults()
     set_dims(240, 320)
     draw_area(0, 0, _disp_xmax, _disp_ymax)
@@ -595,7 +607,7 @@ DAT
 
 DAT
 {
-Copyright 2024 Jesse Burt
+Copyright 2025 Jesse Burt
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 associated documentation files (the "Software"), to deal in the Software without restriction,

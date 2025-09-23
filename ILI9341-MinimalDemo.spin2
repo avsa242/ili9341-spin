@@ -17,7 +17,7 @@ CON
 OBJ
 
     fnt:    "font.5x8"
-    disp:   "display.lcd.ili9341" | WIDTH=320, HEIGHT=240, DBASEPIN=0, RST=8, CS=9, DC=10, WRX=11
+    disp:   "display.lcd.ili9341" | WIDTH=320, HEIGHT=240, DBASEPIN=0, RST=11, CS=8, DC=10, WRX=9
     { NOTE: RDX isn't currently used. Ensure it is pulled high }
     { DBASEPIN defines the pin connected to the LCD's D0; D1..D7 _must_ be connected to the next
         sequential pins }
@@ -29,8 +29,8 @@ PUB main()
 
     { configure the display with the minimum required setup }
     { Presets for ILI9341 }
-    disp.preset_hiletgo_2p4_320x240_land_up()
-'    disp.preset_hiletgo_2p4_320x240_land_down()
+'    disp.preset_hiletgo_2p4_320x240_land_up()
+    disp.preset_hiletgo_2p4_320x240_land_down()
 '    disp.preset_hiletgo_2p4_240x320_port_up()
 '    disp.preset_hiletgo_2p4_240x320_port_down
 

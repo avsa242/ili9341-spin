@@ -4,7 +4,7 @@
     Description:    Driver for ILI9341 LCD controllers
     Author:         Jesse Burt
     Started:        Oct 14, 2021
-    Updated:        Feb 7, 2025
+    Updated:        Sep 23, 2025
     Copyright (c) 2025 - See end of file for terms of use.
 ----------------------------------------------------------------------------------------------------
 }
@@ -216,16 +216,16 @@ PUB stop()
     com.deinit()
 
 
-PUB bitmap(ptr_bmap, sx, sy, ex, ey) | nr_words
+PUB bitmap(p_bmap, sx, sy, w, h) | wds
 ' Draw bitmap
-'   ptr_bmap: pointer to bitmap data
-'   (sx, sy): upper-left corner of bitmap
-'   (ex, ey): lower-right corner of bitmap
-'   nr_words: number of 16-bit words to read/draw from bitmap
-    draw_area(sx, sy, ex, ey)
-    nr_words := 1 #> ( (ex-sx) * (ey-sy) ) / BYTESPERPX
+'   p_bmap:     pointer to bitmap data
+'   (sx, sy):   upper-left corner of bitmap
+'   (w, h):     dimensions of bitmap in pixels
+    wds := 1 #> (w * h)                         ' calc number of words to send to the display
+
+    draw_area(sx, sy, sx+w-1, sy+h-1)
     com.wrbyte_cmd(core.RAMWR)
-    com.wrblkword_msbf(ptr_bmap, nr_words)
+    com.wrblkword_msbf(p_bmap, wds)
 
 
 PUB box(x1, y1, x2, y2, color, filled) | xt, yt

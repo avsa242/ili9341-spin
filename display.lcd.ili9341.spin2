@@ -4,7 +4,7 @@
     Description:    Driver for ILI9341 LCD controllers
     Author:         Jesse Burt
     Started:        Oct 14, 2021
-    Updated:        Sep 23, 2025
+    Updated:        Nov 1, 2025
     Copyright (c) 2025 - See end of file for terms of use.
 ----------------------------------------------------------------------------------------------------
 }
@@ -153,8 +153,9 @@ PUB defaults()
 PUB preset_hiletgo_2p4_320x240_land_up = preset_adafruit_3p2_320x240_land_up
 PUB preset_adafruit_3p2_320x240_land_up()
 ' Preset settings:
+'   Adafruit 2.8" (#1770)
 '   Adafruit 3.2" (#1743)
-'   HiLetGo 2.4"
+'   HiLetGo 2.4" (#2160039)
 '   Landscape (320x * 240y), up
     defaults()
     set_dims(320, 240)
@@ -168,8 +169,9 @@ PUB preset_adafruit_3p2_320x240_land_up()
 PUB preset_hiletgo_2p4_320x240_land_down = preset_adafruit_3p2_320x240_land_down
 PUB preset_adafruit_3p2_320x240_land_down()
 ' Preset settings:
+'   Adafruit 2.8" (#1770)
 '   Adafruit 3.2" (#1743)
-'   HiLetGo 2.4"
+'   HiLetGo 2.4" (#2160039)
 '   Landscape (320x * 240y), down
     defaults()
     set_dims(320, 240)
@@ -183,8 +185,9 @@ PUB preset_adafruit_3p2_320x240_land_down()
 PUB preset_hiletgo_2p4_240x320_port_up = preset_adafruit_3p2_240x320_port_up
 PUB preset_adafruit_3p2_240x320_port_up()
 ' Preset settings:
+'   Adafruit 2.8" (#1770)
 '   Adafruit 3.2" (#1743)
-'   HiLetGo 2.4"
+'   HiLetGo 2.4" (#2160039)
 '   Portrait (240x * 320y), up
     defaults()
     set_dims(240, 320)
@@ -198,8 +201,9 @@ PUB preset_adafruit_3p2_240x320_port_up()
 PUB preset_hiletgo_2p4_240x320_port_down = preset_adafruit_3p2_240x320_port_down
 PUB preset_adafruit_3p2_240x320_port_down()
 ' Preset settings:
+'   Adafruit 2.8" (#1770)
 '   Adafruit 3.2" (#1743)
-'   HiLetGo 2.4"
+'   HiLetGo 2.4" (#2160039)
 '   Portrait (240x * 320y), down
     defaults()
     set_dims(240, 320)

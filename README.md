@@ -39,6 +39,14 @@ P2/SPIN2:
 (other versions or toolchains not listed are __not supported__, and _may or may not_ work)
 
 
+## Hardware compatibility
+
+Tested with:
+* Adafruit 2.8" LCD (#1770)
+* Adafruit 3.2" LCD (#1743)
+* HiLetGo 2.4" (#2160039)
+
+
 ## Limitations
 
 * Very early in development - may malfunction, or outright fail to build

@@ -4,7 +4,7 @@
     Description:    Driver for ILI9341 LCD controllers
     Author:         Jesse Burt
     Started:        Oct 14, 2021
-    Updated:        Sep 23, 2025
+    Updated:        Nov 1, 2025
     Copyright (c) 2025 - See end of file for terms of use.
 ----------------------------------------------------------------------------------------------------
 }
@@ -157,8 +157,9 @@ PUB defaults()
 PUB preset_hiletgo_2p4_320x240_land_up = preset_adafruit_3p2_320x240_land_up
 PUB preset_adafruit_3p2_320x240_land_up()
 ' Preset settings:
+'   Adafruit 2.8" (#1770)
 '   Adafruit 3.2" (#1743)
-'   HiLetGo 2.4"
+'   HiLetGo 2.4" (#2160039)
 '   Landscape (320x * 240y), up
     defaults()
     set_dims(320, 240)
@@ -172,8 +173,9 @@ PUB preset_adafruit_3p2_320x240_land_up()
 PUB preset_hiletgo_2p4_320x240_land_down = preset_adafruit_3p2_320x240_land_down
 PUB preset_adafruit_3p2_320x240_land_down()
 ' Preset settings:
+'   Adafruit 2.8" (#1770)
 '   Adafruit 3.2" (#1743)
-'   HiLetGo 2.4"
+'   HiLetGo 2.4" (#2160039)
 '   Landscape (320x * 240y), down
     defaults()
     set_dims(320, 240)
@@ -187,8 +189,9 @@ PUB preset_adafruit_3p2_320x240_land_down()
 PUB preset_hiletgo_2p4_240x320_port_up = preset_adafruit_3p2_240x320_port_up
 PUB preset_adafruit_3p2_240x320_port_up()
 ' Preset settings:
+'   Adafruit 2.8" (#1770)
 '   Adafruit 3.2" (#1743)
-'   HiLetGo 2.4"
+'   HiLetGo 2.4" (#2160039)
 '   Portrait (240x * 320y), up
     defaults()
     set_dims(240, 320)
@@ -202,8 +205,9 @@ PUB preset_adafruit_3p2_240x320_port_up()
 PUB preset_hiletgo_2p4_240x320_port_down = preset_adafruit_3p2_240x320_port_down
 PUB preset_adafruit_3p2_240x320_port_down()
 ' Preset settings:
+'   Adafruit 2.8" (#1770)
 '   Adafruit 3.2" (#1743)
-'   HiLetGo 2.4"
+'   HiLetGo 2.4" (#2160039)
 '   Portrait (240x * 320y), down
     defaults()
     set_dims(240, 320)
@@ -234,8 +238,8 @@ PUB bitmap(p_bmap, sx, sy, w, h) | wds
 
 PUB box(x1, y1, x2, y2, color, filled) | xt, yt
 ' Draw a box from (x1, y1) to (x2, y2) in color, optionally filled
-    xt := ||(x2-x1)+1
-    yt := ||(y2-y1)+1
+    xt := abs(x2-x1)+1
+    yt := abs(y2-y1)+1
     if (filled)
         draw_area(x1, y1, x2, y2)
         com.wrbyte_cmd(core.RAMWR)
@@ -384,17 +388,17 @@ PUB line(x1, y1, x2, y2, color) | sx, sy, ddx, ddy, err, e2
     if (x1 == x2)
         draw_area(x1, y1, x1, y2)           ' vertical
         com.wrbyte_cmd(core.RAMWR)
-        com.wrwordx_dat(color, (||(y2-y1))+1)
+        com.wrwordx_dat(color, (abs(y2-y1))+1)
         return
     if (y1 == y2)
         draw_area(x1, y1, x2, y1)           ' horizontal
         com.wrbyte_cmd(core.RAMWR)
-        com.wrwordx_dat(color, (||(x2-x1))+1)
+        com.wrwordx_dat(color, (abs(x2-x1))+1)
         return
 
     { Bresenham's line algorithm }
-    ddx := ||(x2-x1)
-    ddy := ||(y2-y1)
+    ddx := abs(x2-x1)
+    ddy := abs(y2-y1)
     err := (ddx-ddy)
 
     sx := -1
@@ -580,7 +584,7 @@ PUB visibility(mode)
 '       ALL_OFF/OFF (0), NORMAL/ON (1), ALL_ON (3)
 '   Any other value is ignored
 '   NOTE: Does not affect the display RAM contents
-    case ||(mode)
+    case abs(mode)
         OFF:
             com.wrbyte_cmd(core.DISPOFF)
         ON:

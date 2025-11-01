@@ -88,7 +88,7 @@ pub main() | m, f, r, word linebuff[320], fpos, y
         '   depending on the BMP)
         fpos := fpos + ( bmp.bytes_per_line() * bmp.row_order() )
 
-    libc.umount(m)
+    libc.umount(@"/sd")
 
     repeat
 

@@ -1,0 +1,115 @@
+{
+---------------------------------------------------------------------------------------------------
+    Filename:       ILI9341-Bitmap.spin2
+    Description:    Demo of the ILI9341 driver (8-bit parallel interface)
+        * BMP image file display
+    Author:         Jesse Burt
+    Started:        Nov 1, 2025
+    Updated:        Nov 1, 2025
+    Copyright (c) 2025 - See end of file for terms of use.
+---------------------------------------------------------------------------------------------------
+}
+
+con
+
+    _clkfreq    = 180_000_000
+    _xtlfreq    = 20_000_000
+
+
+    ' SD card I/O pins
+    SD_CLK      = 61
+    SD_CS       = 60
+    SD_DI       = 59
+    SD_DO       = 58
+
+
+obj
+
+    ser:    "com.serial.terminal.ansi" | SER_BAUD=2_000_000
+    disp:   "display.lcd.ili9341" | WIDTH=240, HEIGHT=320, DBASEPIN=0, RST=11, CS=8, DC=10, WRX=9
+    { NOTE: RDX isn't currently used. Ensure it is pulled high }
+    { DBASEPIN defines the pin connected to the LCD's D0; D1..D7 _must_ be connected to the next
+        sequential pins }
+    libc:   "libc"                              ' C-library wrapper (for vfs code)
+    bmp:    "file.image.bmp"                    ' BMP file parsing
+
+
+dat
+
+    ' filename of BMP to display (currently must be 16bpp)
+    bmp_file    byte "/sd/PLXLG16.BMP", 0
+
+
+pub main() | m, f, r, word linebuff[320], fpos, y
+
+    ser.start()
+    ser.clear()
+
+    disp.start()
+
+
+    ' choose a display orientation preset
+    disp.preset_adafruit_3p2_320x240_land_up()
+'    disp.preset_adafruit_3p2_320x240_land_down()
+'    disp.preset_adafruit_3p2_240x320_port_up()
+'    disp.preset_adafruit_3p2_240x320_port_down
+
+    m := libc.mount(@"/sd", libc._vfs_open_sdcardx(SD_CLK, SD_CS, SD_DI, SD_DO) )
+    if ( m )
+        ser.printf(@"mount failed: %d\n\r", m)
+        repeat
+
+    f := libc.fopen(@bmp_file, @"rb")
+    ifnot ( f )
+        ser.printf(@"error: fopen() failed with %d\n\r", f)
+        repeat
+
+    ' read the BMP header
+    libc.fread(@bmp.header.bmp, 1, bmp.BMP_HEADER_SZ, f)
+    ifnot ( bmp.header_valid() )
+        ser.strln(@"error: invalid BMP file header")
+        libc.fclose(f)
+        libc.umount(@"/sd")
+        repeat
+    r := libc.fread(@bmp.header.dib, 1, bmp.BITMAPV5HEADER_SZ, f)
+
+    ser.printf( @"Image is %dx%dx%dbpp, %dbpl\n\r", ...
+                bmp.width(), bmp.height(), bmp.bpp(), bmp.bytes_per_line() )
+
+    disp.clear()
+    fpos := bmp.imagedata_start()               ' point to the start of the image data
+    repeat bmp.height() <# disp._disp_height with y
+        ' read a line of data from the image
+        wordfill(@linebuff, 0, bmp.width() <# disp._disp_width)
+        libc.fseek(f, fpos, libc.SEEK_SET)      ' seek to the start of the image data
+        libc.fread(@linebuff, 1, bmp.bytes_per_line() <# disp._disp_width*2, f)
+        disp.bitmap(@linebuff, 0, y, bmp.width() <# disp._disp_width, 1)
+        ' go to the next row of the image (could be backwards or forwards in the image data,
+        '   depending on the BMP)
+        fpos := fpos + ( bmp.bytes_per_line() * bmp.row_order() )
+
+    libc.umount(m)
+
+    repeat
+
+
+dat
+{
+Copyright 2025 Jesse Burt
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
+associated documentation files (the "Software"), to deal in the Software without restriction,
+including without limitation the rights to use, copy, modify, merge, publish, distribute,
+sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or
+substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT
+NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT
+OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+}
+

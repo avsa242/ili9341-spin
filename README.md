@@ -12,6 +12,7 @@ This is a P8X32A/Propeller, P2X8C4M64P/Propeller 2 driver object for the ILI9341
 * 16bpp color depth
 * Integration with generic bitmap graphics library
 * Display mirroring (vertical/horizontal) and rotation (landscape/portrait up/down)
+* Buffered display support (P2 only)
 
 
 ## Requirements
@@ -21,10 +22,12 @@ P1/SPIN1:
 * spin-standard-library
 * graphics.common.spinh (provided by spin-standard-library)
 
+
 P2/SPIN2:
 * 1 extra core/cog for the parallel I/O engine
 * p2-spin-standard-library
 * graphics.common.spin2h (provided by p2-spin-standard-library)
+* 150kB of RAM for the framebuffer, if using buffered mode
 
 
 ## Compiler Compatibility
@@ -49,8 +52,7 @@ Tested with:
 
 ## Limitations
 
-* Very early in development - may malfunction, or outright fail to build
 * Not optimized
 * 18bpp color depth not supported (unplanned, for now)
-* Buffered display unsupported
+* Buffered display unsupported on the P1
 

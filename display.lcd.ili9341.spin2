@@ -4,12 +4,12 @@
     Description:    Driver for ILI9341 LCD controllers
     Author:         Jesse Burt
     Started:        Oct 14, 2021
-    Updated:        Nov 1, 2025
+    Updated:        Nov 11, 2025
     Copyright (c) 2025 - See end of file for terms of use.
 ----------------------------------------------------------------------------------------------------
 }
 
-#define GFX_DIRECT
+#define MEMMV_NATIVE wordmove
 #include "graphics.common.spin2h"
 
 CON
@@ -29,7 +29,7 @@ CON
     BPP         = 16                            ' bits per pixel/color depth of the display
     BYTESPERPX  = 1 #> (BPP/8)                  ' limit to minimum of 1
     BPPDIV      = BYTESPERPX #> (8 / BPP)       ' limit to range BYTESPERPX .. (8/BPP)
-    BUFF_SZ     = (WIDTH * HEIGHT) / BPPDIV
+    BUFF_SZ     = (WIDTH * HEIGHT)              ' framebuffer size (in display's native word size)
     MAX_COLOR   = (1 << BPP)-1
     XMAX        = WIDTH-1
     YMAX        = HEIGHT-1
@@ -69,6 +69,9 @@ OBJ
 
 VAR
 
+#ifndef GFX_DIRECT
+    word _framebuffer[BUFF_SZ]
+#endif
     byte _RESET
 
     ' shadow registers
@@ -82,19 +85,24 @@ PUB start(): status
     return startx(DBASEPIN, RST, CS, DC, WRX, WIDTH, HEIGHT)
 
 
-PUB startx(DATA_BASEPIN, RES_PIN, CS_PIN, DC_PIN, WR_PIN, DISP_W, DISP_H): status
+PUB startx(DATA_BASEPIN, RES_PIN, CS_PIN, DC_PIN, WR_PIN, DISP_W, DISP_H, p_fb=0): status
 ' Start driver using custom I/O settings
-'   DATA_BASEPIN: first (lowest) pin of 8 data pin block (must be contiguous)
-'   RES_PIN: display's hardware reset pin (optional, -1 to ignore)
-'   CS_PIN: Chip Select
-'   DC_PIN: Data/Command (sometimes labeled RS, or Register Select)
-'   WR_PIN: Write clock
-'   WIDTH, HEIGHT: display dimensions, in pixels
+'   DATA_BASEPIN:   first (lowest) pin of 8 data pin block (must be contiguous)
+'   RES_PIN:        display's hardware reset pin (optional, -1 to ignore: SW reset used instead)
+'   CS_PIN:         Chip Select
+'   DC_PIN:         Data/Command (sometimes labeled RS, or Register Select)
+'   WR_PIN:         Write clock
+'   WIDTH, HEIGHT:  display dimensions, in pixels
+'   p_fb:           pointer to framebuffer (only when GFX_DIRECT isn't #defined; optional;
+'                       default is internal FB)
     if (    lookdown(DATA_BASEPIN: 0..56) and lookdown(CS_PIN: 0..63) and ...
             lookdown(DC_PIN: 0..63) and lookdown(WR_PIN: 0..63) )
         if ( status := com.init(DATA_BASEPIN, CS_PIN, DC_PIN, WR_PIN) )
             _RESET := RES_PIN
             set_dims(DISP_W, DISP_H)
+#ifndef GFX_DIRECT
+            set_address(@_framebuffer)
+#endif
             return
     ' if this point is reached, something above failed
     ' Double check I/O pin assignments, connections, power
@@ -219,7 +227,7 @@ PUB stop()
     powered(false)
     com.deinit()
 
-
+#ifdef GFX_DIRECT
 PUB bitmap(p_bmap, sx, sy, w, h) | wds
 ' Draw bitmap
 '   p_bmap:     pointer to bitmap data
@@ -256,13 +264,17 @@ PUB box(x1, y1, x2, y2, color, filled) | xt, yt
         draw_area(x2, y1, x2, y2)               ' right
         com.wrbyte_cmd(core.RAMWR)
         com.wrwordx_dat(color, yt)
-
+#endif
 
 PUB clear()
 ' Clear display
+#ifdef GFX_DIRECT
     draw_area(0, 0, _disp_xmax, _disp_ymax)
     com.wrbyte_cmd(core.RAMWR)
     com.wrwordx_dat(_bgcolor, _buff_sz)
+#else
+    wordfill(_ptr_drawbuffer, _bgcolor, _buff_sz)
+#endif
 
 
 PUB clk_div(cdiv)
@@ -378,7 +390,7 @@ PUB invert_colors(state)
 '       TRUE (non-zero), FALSE (0)
     com.wrbyte_cmd(core.INVOFF + ((state <> 0 ) & 1))
 
-
+#ifdef GFX_DIRECT
 PUB line(x1, y1, x2, y2, color) | sx, sy, ddx, ddy, err, e2
 ' Draw line from (x1, y1) to (x2, y2), in color
     if (x1 == x2)
@@ -416,7 +428,7 @@ PUB line(x1, y1, x2, y2, color) | sx, sy, ddx, ddy, err, e2
         if (e2 < ddx)
             err += ddx
             y1 += sy
-
+#endif
 
 PUB mirror_h(state)
 ' Mirror display, horizontally
@@ -458,6 +470,14 @@ PUB plot(x, y, color) | cmd_pkt
     com.wrblock_dat(@cmd_pkt, 2)
 #else
 ' buffered display
+    _framebuffer[x + (y * _disp_width)] := color
+#endif
+
+
+#ifndef GFX_DIRECT
+PUB point(x, y): c
+' Get color of pixel at x, y
+    return word[_ptr_drawbuffer][(0 #> x <# _disp_xmax) + ( (0 #> y <# _disp_ymax) * _disp_width)]
 #endif
 
 
@@ -505,7 +525,12 @@ PUB scroll_up_fs(px)
 
 
 PUB show()
-' dummy method for compatibility with other drivers
+' Send the draw buffer to the display
+#ifndef GFX_DIRECT
+    draw_area(0, 0, 319, 239)
+    com.wrbyte_cmd(core.RAMWR)
+    com.wrblkword_msbf(_ptr_drawbuffer, BUFF_SZ)
+#endif
 
 
 PUB subpix_order(order)
@@ -594,6 +619,16 @@ PUB visibility(mode)
         ALL_ON:
             com.wrbyte_cmd(core.ETMOD)
             com.wrbyte_dat(core.GDR_VGH)
+
+
+PRI memfill(xs, ys, val, count)
+' Fill region of display buffer memory
+'   xs, ys: Start of region
+'   val: Color
+'   count: Number of consecutive memory locations to write
+    wordfill(   _ptr_drawbuffer + ( (xs * 2) + (ys * _bytesperln) ), ...
+                val, ...
+                count )
 
 
 DAT

@@ -4,8 +4,8 @@
     Description:    Driver for ILI9341 LCD controllers
     Author:         Jesse Burt
     Started:        Oct 14, 2021
-    Updated:        Nov 1, 2025
-    Copyright (c) 2025 - See end of file for terms of use.
+    Updated:        Apr 19, 2026
+    Copyright (c) 2026 - See end of file for terms of use.
 ----------------------------------------------------------------------------------------------------
 }
 
@@ -31,7 +31,7 @@ CON
 
     BPP         = 16                            ' bits per pixel/color depth of the display
     BYTESPERPX  = 1 #> (BPP/8)                  ' limit to minimum of 1
-    BPPDIV      = BYTESPERPX #> (8 / BPP)       ' limit to range BYTESPERPX .. (8/BPP)
+    BPPDIV      = 1 #> (8 / BPP)                ' limit to range 1 .. (8/BPP)
     BUFF_SZ     = (WIDTH * HEIGHT) / BPPDIV
     MAX_COLOR   = (1 << BPP)-1
     XMAX        = WIDTH-1
@@ -162,8 +162,8 @@ PUB preset_adafruit_3p2_320x240_land_up()
 '   HiLetGo 2.4" (#2160039)
 '   Landscape (320x * 240y), up
     defaults()
-    set_dims(320, 240)
-    draw_area(0, 0, _disp_xmax, _disp_ymax)
+    set_rotation(270)
+    draw_area(0, 0, 319, 239)
     subpix_order(BGR)
     mirror_h(false)
     mirror_v(false)
@@ -178,8 +178,8 @@ PUB preset_adafruit_3p2_320x240_land_down()
 '   HiLetGo 2.4" (#2160039)
 '   Landscape (320x * 240y), down
     defaults()
-    set_dims(320, 240)
-    draw_area(0, 0, _disp_xmax, _disp_ymax)
+    set_rotation(90)
+    draw_area(0, 0, 319, 239)
     subpix_order(BGR)
     mirror_h(true)
     mirror_v(true)
@@ -194,8 +194,8 @@ PUB preset_adafruit_3p2_240x320_port_up()
 '   HiLetGo 2.4" (#2160039)
 '   Portrait (240x * 320y), up
     defaults()
-    set_dims(240, 320)
-    draw_area(0, 0, _disp_xmax, _disp_ymax)
+    set_rotation(0)
+    draw_area(0, 0, 239, 319)
     subpix_order(BGR)
     mirror_h(true)
     mirror_v(false)
@@ -210,8 +210,8 @@ PUB preset_adafruit_3p2_240x320_port_down()
 '   HiLetGo 2.4" (#2160039)
 '   Portrait (240x * 320y), down
     defaults()
-    set_dims(240, 320)
-    draw_area(0, 0, _disp_xmax, _disp_ymax)
+    set_rotation(180)
+    draw_area(0, 0, 239, 319)
     subpix_order(BGR)
     mirror_h(false)
     mirror_v(true)
@@ -266,7 +266,7 @@ PUB clear()
 ' Clear display
     draw_area(0, 0, _disp_xmax, _disp_ymax)
     com.wrbyte_cmd(core.RAMWR)
-    com.wrwordx_dat(_bgcolor, _buff_sz)
+    com.wrwordx_dat(_bgcolor, _buff_sz >> 1)    ' bytes -> words
 
 
 PUB clk_div(cdiv)
@@ -611,7 +611,7 @@ DAT
 
 DAT
 {
-Copyright 2025 Jesse Burt
+Copyright 2026 Jesse Burt
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 associated documentation files (the "Software"), to deal in the Software without restriction,

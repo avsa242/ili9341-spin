@@ -18,8 +18,8 @@
 CON
 
     { /// default I/O settings - can be overridden in the parent object }
-    WIDTH       = 320
-    HEIGHT      = 240
+    WIDTH       = 240
+    HEIGHT      = 320
     DBASEPIN    = 0
     RST         = 8
     CS          = 9

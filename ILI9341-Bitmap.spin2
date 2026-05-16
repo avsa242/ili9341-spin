@@ -5,10 +5,14 @@
         * BMP image file display
     Author:         Jesse Burt
     Started:        Nov 1, 2025
-    Updated:        Nov 1, 2025
-    Copyright (c) 2025 - See end of file for terms of use.
+    Updated:        Apr 19, 2026
+    Copyright (c) 2026 - See end of file for terms of use.
 ---------------------------------------------------------------------------------------------------
 }
+
+' Uncomment to draw directly to the display instead of a framebuffer in RAM.
+'#define GFX_DIRECT
+'#pragma exportdef(GFX_DIRECT)
 
 con
 
@@ -88,6 +92,8 @@ pub main() | m, f, r, word linebuff[320], fpos, y
         '   depending on the BMP)
         fpos := fpos + ( bmp.bytes_per_line() * bmp.row_order() )
 
+    disp.show()
+
     libc.umount(@"/sd")
 
     repeat
@@ -95,7 +101,7 @@ pub main() | m, f, r, word linebuff[320], fpos, y
 
 dat
 {
-Copyright 2025 Jesse Burt
+Copyright 2026 Jesse Burt
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 associated documentation files (the "Software"), to deal in the Software without restriction,

@@ -4,8 +4,8 @@
     Description:    Driver for ILI9341 LCD controllers
     Author:         Jesse Burt
     Started:        Oct 14, 2021
-    Updated:        Nov 11, 2025
-    Copyright (c) 2025 - See end of file for terms of use.
+    Updated:        May 16, 2026
+    Copyright (c) 2026 - See end of file for terms of use.
 ----------------------------------------------------------------------------------------------------
 }
 
@@ -330,7 +330,7 @@ PUB frame_rate(frate): curr_frate
 '   Valid values: 61, 63, 65, 68, 70, 73, 76, 79, 83, 86, 90, 95, 100, 106, 112, 119
 '       (clamped to range; values are calculated to the nearest match)
 '   NOTE: This setting only affects the display when operating in NORMAL mode
-    _frmctr1[FRM_RT] := (16 - ((( (61 #> frate <# 119) * 1_000) / 3_800) - 16))
+    _frmctr1[FRM_RT] := 16 #> ((1_900 + (frate / 2)) / frate) <# 31
     com.wrbyte_cmd(core.FRMCTR1)
     com.wrbyte_dat(_frmctr1[FCLK_DIV])
     com.wrbyte_dat(_frmctr1[FRM_RT])
@@ -646,7 +646,7 @@ DAT
 
 DAT
 {
-Copyright 2025 Jesse Burt
+Copyright 2026 Jesse Burt
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 associated documentation files (the "Software"), to deal in the Software without restriction,

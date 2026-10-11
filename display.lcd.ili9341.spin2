@@ -99,10 +99,11 @@ PUB startx(DATA_BASEPIN, RES_PIN, CS_PIN, DC_PIN, WR_PIN, DISP_W, DISP_H, p_fb=0
             lookdown(DC_PIN: 0..63) and lookdown(WR_PIN: 0..63) )
         if ( status := com.init(DATA_BASEPIN, CS_PIN, DC_PIN, WR_PIN) )
             _RESET := RES_PIN
-            set_dims(DISP_W, DISP_H)
+            set_display_dims(DISP_W, DISP_H)
 #ifndef GFX_DIRECT
             set_address(@_framebuffer)
 #endif
+            set_context_area(0, 0, DISP_W-1, DISP_H-1)
             return
     ' if this point is reached, something above failed
     ' Double check I/O pin assignments, connections, power
@@ -166,8 +167,9 @@ PUB preset_adafruit_3p2_320x240_land_up()
 '   HiLetGo 2.4" (#2160039)
 '   Landscape (320x * 240y), up
     defaults()
-    set_rotation(270)
+    set_rotation(270)                           ' also calls set_display_dims()
     draw_area(0, 0, 319, 239)
+    set_context_area(0, 0, 319, 239)
     subpix_order(BGR)
     mirror_h(false)
     mirror_v(false)
@@ -184,6 +186,7 @@ PUB preset_adafruit_3p2_320x240_land_down()
     defaults()
     set_rotation(90)
     draw_area(0, 0, 319, 239)
+    set_context_area(0, 0, 319, 239)
     subpix_order(BGR)
     mirror_h(true)
     mirror_v(true)
@@ -200,6 +203,7 @@ PUB preset_adafruit_3p2_240x320_port_up()
     defaults()
     set_rotation(0)
     draw_area(0, 0, 239, 319)
+    set_context_area(0, 0, 239, 319)
     subpix_order(BGR)
     mirror_h(true)
     mirror_v(false)
@@ -216,6 +220,7 @@ PUB preset_adafruit_3p2_240x320_port_down()
     defaults()
     set_rotation(180)
     draw_area(0, 0, 239, 319)
+    set_context_area(0, 0, 239, 319)
     subpix_order(BGR)
     mirror_h(false)
     mirror_v(true)
@@ -270,11 +275,11 @@ PUB box(x1, y1, x2, y2, color, filled) | xt, yt
 PUB clear()
 ' Clear display
 #ifdef GFX_DIRECT
-    draw_area(0, 0, _disp_xmax, _disp_ymax)
+    draw_area(ctx.sx, ctx.sy, ctx.ex, ctx.ey)
     com.wrbyte_cmd(core.RAMWR)
-    com.wrwordx_dat(_bgcolor, _buff_sz >> 1)    ' bytes -> words
+    com.wrwordx_dat(ctx.bgcolor, ctx.buffer_sz >> 1)    ' bytes -> words
 #else
-    wordfill(_ptr_drawbuffer, _bgcolor, _buff_sz >> 1)
+    wordfill(ctx.p_buffer, ctx.bgcolor, ctx.buffer_sz >> 1)
 #endif
 
 
@@ -455,7 +460,10 @@ PUB mirror_v(state)
 
 PUB plot(x, y, color) | cmd_pkt
 ' Plot pixel at (x, y) in color
-    if ((x < 0) or (x > _disp_xmax) or (y < 0) or (y > _disp_ymax))
+'   xxx should we be checking coords against context's relative coords or screen's absolute coords?
+
+    if ( (x < 0) or (y < 0) or (x > (ctx.ex-ctx.sx)) or (y > (ctx.ey-ctx.sy) ) )
+        DEBUG("[ili9341] plot() bad coords ", udec_(x), udec_(y), " bounds: ", udec_(ctx.sx), udec_(ctx.sy), udec_(ctx.ex), udec_(ctx.ey) )
         return                                  ' coords out of bounds, ignore
 #ifdef GFX_DIRECT
 ' direct to display
@@ -471,14 +479,16 @@ PUB plot(x, y, color) | cmd_pkt
     com.wrblock_dat(@cmd_pkt, 2)
 #else
 ' buffered display
-    _framebuffer[x + (y * _disp_width)] := color
+    word[ctx.p_buffer + (x * BYTESPERPX) + (y * ctx.stride)] := color
 #endif
 
 
 #ifndef GFX_DIRECT
 PUB point(x, y): c
 ' Get color of pixel at x, y
-    return word[_ptr_drawbuffer][(0 #> x <# _disp_xmax) + ( (0 #> y <# _disp_ymax) * _disp_width)]
+    x := ctx.sx #> x <# ctx.ex
+    y := ctx.sy #> y <# ctx.ey
+    return word[ctx.p_buffer + (x * BYTESPERPX) + (y * ctx.stride)]
 #endif
 
 
@@ -528,10 +538,23 @@ PUB scroll_up_fs(px)
 PUB show()
 ' Send the draw buffer to the display
 #ifndef GFX_DIRECT
-    draw_area(0, 0, _disp_xmax, _disp_ymax)
+    draw_area(0, 0, screen.width-1, screen.height-1)
     com.wrbyte_cmd(core.RAMWR)
-    com.wrblkword_msbf(_ptr_drawbuffer, BUFF_SZ)
+    com.wrblkword_msbf(screen.p_buffer, screen.buffer_sz/2)
 #endif
+
+
+pub show_context() | y, p, w
+
+    w := (ctx.ex - ctx.sx) + 1
+    p := ctx.p_buffer
+
+    draw_area(ctx.sx, ctx.sy, ctx.ex, ctx.ey)
+    com.wrbyte_cmd(core.RAMWR)
+
+    repeat y from ctx.sy to ctx.ey
+        com.wrblkword_msbf(p, w)
+        p += ctx.stride
 
 
 PUB subpix_order(order)
@@ -610,7 +633,7 @@ PUB visibility(mode)
 '       ALL_OFF/OFF (0), NORMAL/ON (1), ALL_ON (3)
 '   Any other value is ignored
 '   NOTE: Does not affect the display RAM contents
-    case abs(mode)
+    case abs(mode)'xxx abs not needed
         OFF:
             com.wrbyte_cmd(core.DISPOFF)
         ON:
@@ -622,14 +645,26 @@ PUB visibility(mode)
             com.wrbyte_dat(core.GDR_VGH)
 
 
-PRI memfill(xs, ys, val, count)
+PRI memfill(sx, sy, val, len)
 ' Fill region of display buffer memory
-'   xs, ys: Start of region
+'   sx, sy: Start of region
 '   val: Color
-'   count: Number of consecutive memory locations to write
-    wordfill(   _ptr_drawbuffer + ( (xs * 2) + (ys * _bytesperln) ), ...
+'   len: Number of consecutive memory locations to write
+    DEBUG("[ili9341] memfill(", udec_(sx), udec_(sy), uhex_(val), udec_(len), ")")
+    if ( (sx < 0) or (sy < 0) or (sx > screen.width-1) or (sy > screen.height-1) )
+        ' trap bad coordinates
+        DEBUG("[ili9341] bad coordinates")
+        return
+
+    len := len <# (ctx.ex-ctx.sx)-sx            ' limit to right edge (ctx width-fill start)
+    if ( len <= 0 )
+        DEBUG("[ili9341] memfill: bad len ", udec_(len) )
+        return
+
+    DEBUG("[ili9341] memfill: len=", sdec_(len) )
+    wordfill(   ctx.p_buffer + ( (sx * BYTESPERPX) + (sy * screen.stride) ), ...
                 val, ...
-                count )
+                len )
 
 
 DAT

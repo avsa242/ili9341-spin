@@ -4,10 +4,11 @@
     Description:    Driver for ILI9341 LCD controllers
     Author:         Jesse Burt
     Started:        Oct 14, 2021
-    Updated:        May 16, 2026
+    Updated:        Nov 11, 2026
     Copyright (c) 2026 - See end of file for terms of use.
 ----------------------------------------------------------------------------------------------------
 }
+#define HAS_SET_ROTATION                        ' provides hardware set_rotation()
 
 ' memory usage for a buffered display would vastly exceed what's available
 '   on the P1, so hardcode direct-to-display directive:
@@ -121,7 +122,7 @@ PUB defaults()
 
     mirror_v(false)
     mirror_h(false)
-    rotation(0)
+    set_rotation(0)
     vert_refresh_dir(NORM)
     subpix_order(RGB)
     horiz_refresh_dir(NORM)
@@ -165,9 +166,6 @@ PUB preset_adafruit_3p2_320x240_land_up()
     set_rotation(270)
     draw_area(0, 0, 319, 239)
     subpix_order(BGR)
-    mirror_h(false)
-    mirror_v(false)
-    rotation(1)
 
 
 PUB preset_hiletgo_2p4_320x240_land_down = preset_adafruit_3p2_320x240_land_down
@@ -181,9 +179,6 @@ PUB preset_adafruit_3p2_320x240_land_down()
     set_rotation(90)
     draw_area(0, 0, 319, 239)
     subpix_order(BGR)
-    mirror_h(true)
-    mirror_v(true)
-    rotation(1)
 
 
 PUB preset_hiletgo_2p4_240x320_port_up = preset_adafruit_3p2_240x320_port_up
@@ -197,9 +192,6 @@ PUB preset_adafruit_3p2_240x320_port_up()
     set_rotation(0)
     draw_area(0, 0, 239, 319)
     subpix_order(BGR)
-    mirror_h(true)
-    mirror_v(false)
-    rotation(0)
 
 
 PUB preset_hiletgo_2p4_240x320_port_down = preset_adafruit_3p2_240x320_port_down
@@ -213,9 +205,6 @@ PUB preset_adafruit_3p2_240x320_port_down()
     set_rotation(180)
     draw_area(0, 0, 239, 319)
     subpix_order(BGR)
-    mirror_h(false)
-    mirror_v(true)
-    rotation(0)
 
 
 PUB stop()
@@ -488,20 +477,59 @@ PUB reset()
         time.msleep(5)
 
 
-PUB rotation(state)
-' Rotate display
-'   Valid values: TRUE (non-zero), FALSE (0)
-    state := (((state <> 0) & 1) << core.MV)
-
-    _madctl := ((_madctl & core.MV_MASK) | state)
-    com.wrbyte_cmd(core.MADCTL)
-    com.wrbyte_dat(_madctl)
-
-
 #ifdef GFX_DIRECT
 PUB scroll_up_fs(px)
 ' dummy method
 #endif
+
+
+pub set_rotation(r) | w, h
+' Set display orientation (hardware-native)
+'   r:  orientation from hardware default (degrees)
+'       0:      no change from panel/hardware default
+'       90:     rotate 90deg CW
+'       180:    rotate 180deg
+'       270:    rotate 270deg
+    case r
+        0:
+            w := WIDTH                          ' orientation: default panel orientation
+            h := HEIGHT
+            _rotation := 0                      ' = 0deg
+            r := 0                              ' ili9341 rotate (MV): no (portrait)
+            mirror_h(true)
+            mirror_v(false)
+        90:
+            w := HEIGHT                         ' orientation: width/height swapped
+            h := WIDTH
+            _rotation := 1                      ' = 90deg
+            r := 1                              ' ili9341 rotate (MV): yes (landscape)
+            mirror_h(false)
+            mirror_v(false)
+        180:
+            w := WIDTH
+            h := HEIGHT
+            _rotation := 2                      ' = 180deg
+            r := 0
+            mirror_h(false)
+            mirror_v(true)
+        270:
+            w := HEIGHT
+            h := WIDTH
+            _rotation := 3                      ' = 270deg
+            r := 1
+            mirror_h(true)
+            mirror_v(true)
+        other:
+            return
+
+    set_dims(w, h)                              ' set/update drawable screen dimensions
+    font_sz()                                   ' re-compute text cursor limits
+
+    r := ( ( (r <> 0) & 1) << core.MV)
+
+    _madctl := ( (_madctl & core.MV_MASK) | r)
+    com.wrbyte_cmd(core.MADCTL)
+    com.wrbyte_dat(_madctl)
 
 
 PUB show()
